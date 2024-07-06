@@ -1,0 +1,194 @@
+<template>
+    <view class="container">
+        <view class="comment-detail">
+            <text class="nickname">{{ nickname }}</text>
+		</view>
+		<view class="comment-detail2">
+			<!--<button type="primary" @click="navigateToCamera">拍照上传</button>-->
+			<camera device-position="back" flash="off" @error="error" style="width: 100%; height: 200px;"></camera>
+			<button type="primary" @click="takePhoto">拍照上传</button>
+			<image :src="src" mode="aspectFit" class="top-centered-image">
+		</view>
+        <view class="input-box">
+            <textarea v-model="newComment" placeholder="请输入您的评论"></textarea>
+            <button @click="submitComment">提交评论</button>
+        </view>
+    </view>
+</template>
+
+<script>
+export default {
+    data() {
+        return {
+            nickname: '',
+            content: '',
+            src: '',
+            newComment: ''
+        }
+    },
+    onLoad(options) {
+		if (options.src) {
+		    this.src = decodeURIComponent(options.src);
+		} else {
+		    const commentData = uni.getStorageSync('commentData');
+		    if (commentData) {
+		        this.nickname = commentData.nickname;
+		        this.content = commentData.content;
+		    }
+		}
+        if (options.nickname && options.content) {
+            this.nickname = decodeURIComponent(options.nickname);
+            this.content = decodeURIComponent(options.content);
+            console.log('Received nickname:', this.nickname);
+            console.log('Received content:', this.content);
+            // 将评论数据保存到本地存储
+            uni.setStorageSync('commentData', { nickname: this.nickname, content: this.content });
+        } else {
+            // 从本地存储获取评论数据
+            const commentData = uni.getStorageSync('commentData');
+            if (commentData) {
+                this.nickname = commentData.nickname;
+                this.content = commentData.content;
+            } else {
+                console.log('No nickname or content parameter received');
+            }
+        }
+
+        
+    },
+    methods: {
+        submitComment() {
+            if (this.newComment.trim() !== '') {
+                uni.navigateBack({
+                    delta: 1,
+                    success: () => {
+                        const eventChannel = this.getOpenerEventChannel();
+                        eventChannel.emit('acceptComment', { comment: this.newComment,src:this.src });
+                    }
+                });
+            }
+        },
+		/*navigateToCamera(src) {
+		    const self = this;
+		    uni.navigateTo({
+		        url: `/pages/my/my-camera`,
+		        events: {
+		            acceptComment(data) {
+						src=data.src;
+		            }
+		        },
+		        fail(err) {
+		            console.error('Navigation failed:', err);
+		        }
+		    });
+		},*/
+		takePhoto() {
+		         const ctx = uni.createCameraContext();
+		         ctx.takePhoto({
+		             quality: 'high',
+		             success: (res) => {
+		                 this.src = res.tempImagePath;
+		                 console.log('Photo taken, path:', this.src); // 调试输出
+		                 
+		                 // 延迟一秒导航以确保路径获取成功
+		                 setTimeout(() => {
+		                    /*uni.navigateTo({
+		                        url: "/pages/my/my-argue?src=" + encodeURIComponent(this.src)
+		                    });*/
+		                 }, 1000);
+		             }
+		         });
+		     },
+		error(e) {
+		    console.log(e.detail);
+		}
+    }
+}
+</script>
+
+<style>
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 内容在顶部对齐 */
+    align-items: center;
+    height: 100vh; /* 使容器全屏高度 */
+    background-color: #f0f0f0; /* 可选，添加背景颜色 */
+    position: relative;
+}
+
+.comment-detail {
+    width: 90%;
+    margin: 10px -10px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.comment-detail2 {
+    width: 90%;
+    margin: -5px 10px;
+    padding: 5px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+}
+.nickname {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.content {
+    color: #666;
+}
+
+.top-centered-image {
+    width: 100%; /* 缩放到原始大小的一半 */
+    height: 80%; /* 缩放到原始大小的一半 */
+    object-fit: contain; /* 确保图片按原始比例缩放 */
+	justify-content: center; /* 内容在顶部对齐 */
+	align-items: center;
+	margin-top: 20px;
+}
+
+.click-box {
+    margin-top: 10px; /* 顶部间距 */
+    padding: 10px 20px;
+    background-color: #007bff; /* 背景颜色 */
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer; /* 鼠标悬停时显示手形光标 */
+    text-align: center;
+}
+
+.input-box {
+    width: 90%;
+    position: absolute; /* 绝对定位 */
+    bottom: 0; /* 与底部对齐 */
+    padding: 10px 0;
+    background-color: #fff;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1); /* 添加阴影 */
+}
+
+textarea {
+    width: 100%;
+    height: 50px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    resize: none;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+}
+</style>
