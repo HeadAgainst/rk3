@@ -3,11 +3,11 @@
         <view class="comment-detail">
             <text class="nickname">{{ nickname }}</text>
 		</view>
-		<view class="comment-detail2">
-			<!--<button type="primary" @click="navigateToCamera">拍照上传</button>-->
-			<camera device-position="back" flash="off" @error="error" style="width: 100%; height: 200px;"></camera>
-			<button type="primary" @click="takePhoto">拍照上传</button>
-			<image :src="src" mode="aspectFit" class="top-centered-image">
+		<view class="comment" v-for="(comment, index) in comments" :key="index" @click="navigateToCamera(comment)" >
+			<button type="primary" >拍照上传</button>
+			<!--<camera device-position="back" flash="off" @error="error" style="width: 100%; height: 200px;"></camera>
+			<button type="primary" @click="takePhoto">拍照上传</button>-->
+			<image :src="comment.photo" mode="aspectFill" class="top-centered-image">
 		</view>
         <view class="input-box">
             <textarea v-model="newComment" placeholder="请输入您的评论"></textarea>
@@ -23,18 +23,17 @@ export default {
             nickname: '',
             content: '',
             src: '',
-            newComment: ''
+            newComment: '',
+			comments: [
+		    {
+		        photo: '',
+		    }
+			]
         }
     },
     onLoad(options) {
 		if (options.src) {
 		    this.src = decodeURIComponent(options.src);
-		} else {
-		    const commentData = uni.getStorageSync('commentData');
-		    if (commentData) {
-		        this.nickname = commentData.nickname;
-		        this.content = commentData.content;
-		    }
 		}
         if (options.nickname && options.content) {
             this.nickname = decodeURIComponent(options.nickname);
@@ -58,31 +57,40 @@ export default {
     },
     methods: {
         submitComment() {
-            if (this.newComment.trim() !== '') {
-                uni.navigateBack({
-                    delta: 1,
-                    success: () => {
-                        const eventChannel = this.getOpenerEventChannel();
-                        eventChannel.emit('acceptComment', { comment: this.newComment,src:this.src });
+                    if (this.newComment.trim() !== '') {
+                        // 获取最新的 comment.photo 值
+                        const latestPhoto = this.comments.length > 0 ? this.comments[this.comments.length - 1].photo : '';
+        
+                        uni.navigateBack({
+                            delta: 1,
+                            success: () => {
+                                const eventChannel = this.getOpenerEventChannel();
+                                eventChannel.emit('acceptComment', { comment: this.newComment, src: latestPhoto });
+                            }
+                        });
                     }
-                });
-            }
-        },
-		/*navigateToCamera(src) {
+                },
+		navigateToCamera(comment) {
 		    const self = this;
 		    uni.navigateTo({
 		        url: `/pages/my/my-camera`,
 		        events: {
-		            acceptComment(data) {
-						src=data.src;
+		            acceptCamera(data) {
+						comment.photo=data.src;
+						console.log('Photo taken, path:',comment.photo);
+						setTimeout(() => {
+						   /*uni.navigateTo({
+						       url: "/pages/my/my-argue?src=" + encodeURIComponent(this.src)
+						   });*/
+						}, 1000);
 		            }
 		        },
 		        fail(err) {
 		            console.error('Navigation failed:', err);
 		        }
 		    });
-		},*/
-		takePhoto() {
+		},
+		/*takePhoto() {
 		         const ctx = uni.createCameraContext();
 		         ctx.takePhoto({
 		             quality: 'high',
@@ -94,11 +102,11 @@ export default {
 		                 setTimeout(() => {
 		                    /*uni.navigateTo({
 		                        url: "/pages/my/my-argue?src=" + encodeURIComponent(this.src)
-		                    });*/
+		                    });/
 		                 }, 1000);
 		             }
 		         });
-		     },
+		     },*/
 		error(e) {
 		    console.log(e.detail);
 		}
@@ -117,6 +125,15 @@ export default {
     position: relative;
 }
 
+.comment {
+    width: 90%; /* 调整宽度 */
+    height: 60%; /* 高度根据内容自动调整 */
+    margin: 10px 20px; /* 上下边距为 10px，左右边距为 0 */
+    padding: 10px; /* 内边距为 10px */
+    background-color: #fff; /* 背景颜色为白色 */
+    border-radius: 8px; /* 边框圆角半径 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 阴影效果 */
+}
 .comment-detail {
     width: 90%;
     margin: 10px -10px;
@@ -165,7 +182,7 @@ export default {
 .input-box {
     width: 90%;
     position: absolute; /* 绝对定位 */
-    bottom: 0; /* 与底部对齐 */
+    bottom: 5%; /* 与底部对齐 */
     padding: 10px 0;
     background-color: #fff;
     box-shadow: 0 -2px 4px rgba(0,0,0,0.1); /* 添加阴影 */
